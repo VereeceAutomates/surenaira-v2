@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SureNaira — Nigerian Surebet Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── Reset ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root {
+  --bg:        #080b0f;
+  --bg2:       #0d1117;
+  --bg3:       #12181f;
+  --border:    #1d2630;
+  --border2:   #253040;
+  --green:     #00e676;
+  --green-dim: #00c85a;
+  --green-glow:#00e67620;
+  --amber:     #ffab00;
+  --red:       #ff3d57;
+  --blue:      #2196f3;
+  --purple:    #9c27b0;
+  --text:      #e8edf2;
+  --text2:     #8a9bb0;
+  --text3:     #4a5a6a;
+  --mono:      'Space Mono', monospace;
+  --sans:      'Syne', sans-serif;
+}
+
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow-x:hidden}
+
+/* ── Scanline texture overlay ── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,230,118,.012) 2px,rgba(0,230,118,.012) 4px);
+  pointer-events:none;z-index:9999;
+}
+
+/* ── Layout ── */
+.shell{display:grid;grid-template-rows:auto auto 1fr;min-height:100vh;max-width:1600px;margin:0 auto;padding:0 20px}
+
+/* ── Header ── */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 0 14px;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:var(--bg);z-index:100;
+}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{
+  width:36px;height:36px;background:var(--green);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-weight:700;font-size:13px;color:#000;
+  box-shadow:0 0 18px var(--green-glow);
+}
+.logo-text{font-size:18px;font-weight:800;letter-spacing:-0.5px}
+.logo-text em{color:var(--green);font-style:normal}
+.logo-sub{font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px}
+
+.header-right{display:flex;align-items:center;gap:16px}
+.conn-badge{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:10px;
+  padding:5px 12px;border-radius:4px;
+  border:1px solid var(--border2);
+  color:var(--text2);
+  transition:all .3s;
+}
+.conn-badge.live{border-color:var(--green);color:var(--green);box-shadow:0 0 10px var(--green-glow)}
+.conn-badge.demo{border-color:var(--amber);color:var(--amber)}
+.conn-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+.api-url-wrap{display:flex;align-items:center;gap:6px}
+#apiUrl{
+  font-family:var(--mono);font-size:11px;
+  background:var(--bg2);border:1px solid var(--border);
+  color:var(--text2);padding:5px 10px;border-radius:4px;
+  width:220px;outline:none;
+  transition:border-color .2s;
+}
+#apiUrl:focus{border-color:var(--green)}
+#connectBtn{
+  font-family:var(--mono);font-size:10px;padding:5px 14px;
+  background:transparent;border:1px solid var(--green);
+  color:var(--green);border-radius:4px;cursor:pointer;
+  transition:all .15s;white-space:nowrap;
+}
+#connectBtn:hover{background:var(--green);color:#000}
+
+.clock{font-family:var(--mono);font-size:11px;color:var(--text3)}
+
+/* ── Stats Bar ── */
+.stats-bar{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:10px;
+  padding:14px 0;border-bottom:1px solid var(--border);
+}
+.stat{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:6px;padding:12px 14px;position:relative;overflow:hidden;
+}
+.stat::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--green);opacity:0;transition:opacity .3s;
+}
+.stat.active::before{opacity:1}
+.stat-label{font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.stat-val{font-size:24px;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1}
+.stat-val.g{color:var(--green)}
+.stat-val.a{color:var(--amber)}
+.stat-val.r{color:var(--red)}
+.stat-val.b{color:var(--blue)}
+
+/* ── Content Grid ── */
+.content{display:grid;grid-template-columns:1fr 320px;gap:14px;padding:14px 0 40px;align-items:start}
+
+/* ── Filter Bar ── */
+.filter-bar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:10px 14px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:8px 8px 0 0;
+  border-bottom:none;
+}
+.filter-label{font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.8px;white-space:nowrap}
+.chip{
+  font-size:10px;font-family:var(--mono);
+  padding:4px 10px;border-radius:3px;
+  border:1px solid var(--border2);background:transparent;
+  color:var(--text2);cursor:pointer;transition:all .12s;white-space:nowrap;
+}
+.chip:hover{border-color:var(--green);color:var(--green)}
+.chip.on{background:var(--green);color:#000;border-color:var(--green)}
+.chip.amber.on{background:var(--amber);color:#000;border-color:var(--amber)}
+.chip.red.on{background:var(--red);color:#fff;border-color:var(--red)}
+
+.filter-sep{width:1px;height:18px;background:var(--border2);flex-shrink:0}
+
+#minPct{
+  width:58px;font-family:var(--mono);font-size:11px;
+  background:var(--bg);border:1px solid var(--border2);
+  color:var(--text);padding:4px 8px;border-radius:3px;
+  outline:none;
+}
+#minPct:focus{border-color:var(--green)}
+
+#searchBox{
+  font-family:var(--mono);font-size:11px;
+  background:var(--bg);border:1px solid var(--border2);
+  color:var(--text);padding:4px 10px;border-radius:3px;
+  outline:none;width:160px;margin-left:auto;
+}
+#searchBox:focus{border-color:var(--green)}
+#searchBox::placeholder{color:var(--text3)}
+
+/* ── Table ── */
+.table-wrap{
+  border:1px solid var(--border);border-radius:0 0 8px 8px;
+  overflow:hidden;
+}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+thead th{
+  font-size:9px;font-family:var(--mono);text-transform:uppercase;
+  letter-spacing:.7px;color:var(--text3);
+  padding:9px 12px;background:var(--bg3);
+  text-align:left;border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+thead th.sortable{cursor:pointer}
+thead th.sortable:hover{color:var(--text)}
+thead th.sorted{color:var(--green)}
+
+tbody tr{
+  border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .1s;
+}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover td{background:rgba(255,255,255,.025)}
+tbody tr.selected td{background:rgba(0,230,118,.05)!important}
+tbody tr.new-arb td{animation:flashrow .6s ease}
+@keyframes flashrow{0%{background:rgba(0,230,118,.2)}100%{background:transparent}}
+
+td{
+  padding:9px 12px;font-size:12px;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  vertical-align:middle;
+}
+
+/* Column widths */
+col.c-event{width:22%}
+col.c-mkt{width:13%}
+col.c-lega{width:19%}
+col.c-legb{width:19%}
+col.c-pct{width:9%}
+col.c-type{width:7%}
+col.c-age{width:6%}
+col.c-act{width:5%}
+
+.event-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.event-meta{font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px}
+
+.mkt-badge{
+  font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:3px;
+  display:inline-block;white-space:nowrap;letter-spacing:.3px;
+}
+.mkt-badge.ou    {background:rgba(33,150,243,.12);color:#64b5f6}
+.mkt-badge.ah    {background:rgba(156,39,176,.12);color:#ce93d8}
+.mkt-badge.btts  {background:rgba(255,171,0,.12);color:var(--amber)}
+.mkt-badge.hw    {background:rgba(0,230,118,.1);color:var(--green)}
+.mkt-badge.cross {background:rgba(255,61,87,.12);color:#ff8a9b}
+
+.leg-outcome{font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.leg-meta{display:flex;align-items:center;gap:5px;margin-top:2px}
+.bookie-tag{
+  font-size:9px;font-family:var(--mono);color:var(--text3);
+  background:var(--bg3);padding:2px 5px;border-radius:2px;
+  border:1px solid var(--border);white-space:nowrap;
+}
+.odds-val{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green)}
+
+.pct{font-family:var(--mono);font-weight:700;font-size:13px}
+.pct.hot {color:var(--red)}
+.pct.warm{color:var(--amber)}
+.pct.mild{color:var(--green)}
+
+.live-tag{font-size:8px;font-family:var(--mono);font-weight:700;padding:2px 5px;background:rgba(255,61,87,.15);color:var(--red);border-radius:2px;letter-spacing:.5px}
+.pre-tag {font-size:8px;font-family:var(--mono);color:var(--text3);letter-spacing:.3px}
+
+.action-btn{
+  font-size:9px;font-family:var(--mono);padding:3px 8px;
+  background:transparent;border:1px solid var(--border2);
+  color:var(--text3);border-radius:3px;cursor:pointer;
+  transition:all .12s;white-space:nowrap;
+}
+.action-btn:hover{border-color:var(--green);color:var(--green)}
+
+.empty-row td{text-align:center;padding:60px;color:var(--text3);font-family:var(--mono);font-size:12px}
+
+/* ── Right Panel ── */
+.right-panel{display:flex;flex-direction:column;gap:12px}
+
+/* ── Calculator Panel ── */
+.panel{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px;overflow:hidden;
+}
+.panel-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:var(--bg3);
+  border-bottom:1px solid var(--border);
+}
+.panel-title{font-size:11px;font-weight:700;font-family:var(--mono);color:var(--text);text-transform:uppercase;letter-spacing:.5px}
+.panel-sub{font-size:9px;font-family:var(--mono);color:var(--text3)}
+.panel-body{padding:14px}
+
+.calc-row{margin-bottom:10px}
+.calc-label{font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+.calc-input{
+  display:flex;align-items:center;gap:6px;
+}
+.calc-prefix{font-family:var(--mono);font-size:12px;color:var(--text3);min-width:14px}
+.calc-input input{
+  flex:1;font-family:var(--mono);font-size:13px;
+  background:var(--bg);border:1px solid var(--border2);
+  color:var(--text);padding:7px 10px;border-radius:4px;
+  outline:none;width:100%;transition:border-color .15s;
+}
+.calc-input input:focus{border-color:var(--green)}
+
+.calc-result{
+  margin-top:12px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:6px;padding:12px;
+}
+.res-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:4px 0;font-size:11px;
+}
+.res-label{color:var(--text2);font-family:var(--mono)}
+.res-val{font-family:var(--mono);font-weight:700}
+.res-val.g{color:var(--green);font-size:16px}
+.res-val.a{color:var(--amber)}
+.res-divider{border:none;border-top:1px solid var(--border);margin:6px 0}
+
+.warning-box{
+  margin-top:10px;padding:8px 10px;
+  background:rgba(255,61,87,.08);border:1px solid rgba(255,61,87,.3);
+  border-radius:4px;font-size:10px;font-family:var(--mono);color:var(--red);
+  display:none;
+}
+
+/* ── Bookmaker Status Panel ── */
+.bk-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;
+}
+.bk-item:last-child{border-bottom:none}
+.bk-name{font-family:var(--mono);font-weight:700;font-size:10px}
+.bk-meta{font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:1px}
+.bk-status{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.bk-status.ok  {background:var(--green);box-shadow:0 0 6px var(--green)}
+.bk-status.err {background:var(--red)}
+.bk-status.idle{background:var(--text3)}
+
+/* ── Toast ── */
+.toast-wrap{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:1000}
+.toast{
+  font-family:var(--mono);font-size:11px;
+  padding:10px 16px;border-radius:5px;
+  border:1px solid var(--border2);background:var(--bg2);
+  color:var(--text);box-shadow:0 4px 20px rgba(0,0,0,.5);
+  animation:toastin .2s ease;max-width:320px;
+}
+.toast.success{border-color:var(--green);color:var(--green)}
+.toast.info   {border-color:var(--blue);color:var(--blue)}
+.toast.warn   {border-color:var(--amber);color:var(--amber)}
+@keyframes toastin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .content{grid-template-columns:1fr}
+  .right-panel{display:none}
+  .stats-bar{grid-template-columns:repeat(3,1fr)}
+  .stats-bar .stat:nth-child(4),.stats-bar .stat:nth-child(5){display:none}
+  .api-url-wrap{display:none}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">SN</div>
+    <div>
+      <div class="logo-text">Sure<em>Naira</em></div>
+      <div class="logo-sub">Nigerian Surebet Scanner</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="api-url-wrap">
+      <input type="text" id="apiUrl" placeholder="http://localhost:8000" value="http://localhost:8000">
+      <button id="connectBtn">Connect</button>
+    </div>
+    <div class="conn-badge demo" id="connBadge">
+      <div class="conn-dot"></div>
+      <span id="connLabel">DEMO MODE</span>
+    </div>
+    <div class="clock" id="clock"></div>
+  </div>
+</header>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat" id="statArbs">
+    <div class="stat-label">Active Arbs</div>
+    <div class="stat-val g" id="vArbs">—</div>
+  </div>
+  <div class="stat" id="statAvg">
+    <div class="stat-label">Avg Profit</div>
+    <div class="stat-val" id="vAvg">—</div>
+  </div>
+  <div class="stat" id="statBest">
+    <div class="stat-label">Best Arb</div>
+    <div class="stat-val a" id="vBest">—</div>
+  </div>
+  <div class="stat" id="statLive">
+    <div class="stat-label">Live Arbs</div>
+    <div class="stat-val r" id="vLive">—</div>
+  </div>
+  <div class="stat" id="statScan">
+    <div class="stat-label">Last Scan</div>
+    <div class="stat-val b" id="vScan" style="font-size:13px">—</div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content">
+  <!-- LEFT: Table -->
+  <div>
+    <!-- Filters -->
+    <div class="filter-bar">
+      <span class="filter-label">Market</span>
+      <button class="chip on" data-mkt="all">All</button>
+      <button class="chip" data-mkt="hw">Home/Away</button>
+      <button class="chip" data-mkt="ou">Over/Under</button>
+      <button class="chip" data-mkt="ah">Asian HDP</button>
+      <button class="chip" data-mkt="btts">BTTS</button>
+      <button class="chip" data-mkt="cross">Cross-Mkt</button>
+
+      <div class="filter-sep"></div>
+      <span class="filter-label">Type</span>
+      <button class="chip on" data-type="all">All</button>
+      <button class="chip amber" data-type="live">Live</button>
+      <button class="chip" data-type="prematch">Pre-match</button>
+
+      <div class="filter-sep"></div>
+      <span class="filter-label">Min %</span>
+      <input type="number" id="minPct" value="0" min="0" max="20" step="0.1">
+
+      <input type="text" id="searchBox" placeholder="Search team / league…">
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col class="c-event"><col class="c-mkt"><col class="c-lega">
+          <col class="c-legb"><col class="c-pct"><col class="c-type">
+          <col class="c-age"><col class="c-act">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>Market</th>
+            <th>Leg A</th>
+            <th>Leg B</th>
+            <th class="sortable sorted" id="thPct">Profit ↓</th>
+            <th>Type</th>
+            <th>Age</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="arbTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RIGHT: Panels -->
+  <div class="right-panel">
+
+    <!-- Calculator -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Stake Calculator</div>
+        <div class="panel-sub" id="calcLabel">Select a row</div>
+      </div>
+      <div class="panel-body">
+        <div class="calc-row">
+          <div class="calc-label">Total Budget (NGN)</div>
+          <div class="calc-input"><span class="calc-prefix">₦</span><input type="number" id="cBudget" value="50000" min="1000" step="1000"></div>
+        </div>
+        <div class="calc-row">
+          <div class="calc-label">Leg A Odds</div>
+          <div class="calc-input"><input type="number" id="cOddsA" value="2.10" step="0.01" min="1.01"></div>
+        </div>
+        <div class="calc-row">
+          <div class="calc-label">Leg B Odds</div>
+          <div class="calc-input"><input type="number" id="cOddsB" value="2.20" step="0.01" min="1.01"></div>
+        </div>
+        <div class="calc-result">
+          <div class="res-row"><span class="res-label">Implied Prob</span><span class="res-val" id="rImpl">—</span></div>
+          <div class="res-row"><span class="res-label">Stake on Leg A</span><span class="res-val" id="rSA">—</span></div>
+          <div class="res-row"><span class="res-label">Stake on Leg B</span><span class="res-val" id="rSB">—</span></div>
+          <hr class="res-divider">
+          <div class="res-row"><span class="res-label">Guaranteed Return</span><span class="res-val a" id="rRet">—</span></div>
+          <div class="res-row"><span class="res-label">Guaranteed Profit</span><span class="res-val g" id="rProfit">—</span></div>
+        </div>
+        <div class="warning-box" id="calcWarn">No arb — implied probability exceeds 100%.</div>
+      </div>
+    </div>
+
+    <!-- Bookmaker Status -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Bookmakers</div>
+        <div class="panel-sub" id="bkLastUpdate">—</div>
+      </div>
+      <div class="panel-body" id="bkList" style="padding:8px 14px"></div>
+    </div>
+
+    <!-- How it works -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">How Cross-Market Arbs Work</div>
+      </div>
+      <div class="panel-body" style="font-size:11px;line-height:1.7;color:var(--text2)">
+        <p style="margin-bottom:8px">A <span style="color:var(--green);font-family:var(--mono)">cross-market arb</span> uses two different market types that together cover <b style="color:var(--text)">100% of all outcomes</b>.</p>
+        <p style="margin-bottom:8px"><b style="color:var(--text)">Example:</b> Home (-1:0) HDP × Away Win:</p>
+        <div style="font-family:var(--mono);font-size:10px;background:var(--bg3);padding:8px 10px;border-radius:4px;line-height:1.8;border:1px solid var(--border)">
+          Leg A: Home (-1:0) EH<br>
+          &nbsp;→ Wins if: Home 2-0+, or 1-0, or Draw<br>
+          Leg B: Away Win (1X2)<br>
+          &nbsp;→ Wins if: Away wins<br>
+          <span style="color:var(--green)">Together = all results covered ✓</span>
+        </div>
+        <p style="margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--text3)">
+          Implied = (1/oddsA) + (1/oddsB)<br>
+          Profit% = (1 − implied) / implied × 100
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /content -->
+
+</div><!-- /shell -->
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════════════
+const CONFIG = {
+  pollInterval:    15000,   // ms — REST fallback poll interval
+  wsReconnect:     5000,    // ms — WebSocket reconnect delay
+  arbMaxAge:       300,     // seconds — hide arbs older than this
+  defaultApiUrl:   'http://localhost:8000',
+};
+
+// ════════════════════════════════════════════════════════
+// DEMO DATA — used when no backend is connected
+// ════════════════════════════════════════════════════════
+const DEMO_ARBS = [
+  {arb_id:'d1',event:{home_team:'Napoli',away_team:'Lazio',league:'Serie A',sport:'football',is_live:false},
+   leg_a:{bookmaker:'SportyBet',bookmaker_id:'sportybet',market:'over_under',outcome:'Over 2.5',odds:2.10,url:'https://sportybet.com'},
+   leg_b:{bookmaker:'Bet9ja',bookmaker_id:'bet9ja',market:'over_under',outcome:'Under 2.5',odds:2.20,url:'https://bet9ja.com'},
+   arb:{profit_pct:7.44,market_type:'direct',market_label:'Over/Under',is_live:false,age_seconds:45,detected_at:new Date().toISOString()}},
+  {arb_id:'d2',event:{home_team:'Real Madrid',away_team:'Barcelona',league:'La Liga',sport:'football',is_live:true,minute:67,score:'1-1'},
+   leg_a:{bookmaker:'SportyBet',bookmaker_id:'sportybet',market:'european_handicap',outcome:'Home (-1:0) HDP',odds:1.88,url:'https://sportybet.com'},
+   leg_b:{bookmaker:'BetKing',bookmaker_id:'betking',market:'1x2',outcome:'Away Win',odds:2.35,url:'https://betking.com'},
+   arb:{profit_pct:5.89,market_type:'cross',market_label:'Home (-1:0) HDP × Away Win',is_live:true,age_seconds:12,detected_at:new Date().toISOString()}},
+  {arb_id:'d3',event:{home_team:'Chelsea',away_team:'Liverpool',league:'Premier League',sport:'football',is_live:false},
+   leg_a:{bookmaker:'BangBet',bookmaker_id:'bangbet',market:'btts',outcome:'BTTS Yes',odds:2.05,url:'https://bangbet.com'},
+   leg_b:{bookmaker:'Msport',bookmaker_id:'msport',market:'btts',outcome:'BTTS No',odds:2.10,url:'https://msport.com'},
+   arb:{profit_pct:3.74,market_type:'direct',market_label:'BTTS',is_live:false,age_seconds:80,detected_at:new Date().toISOString()}},
+  {arb_id:'d4',event:{home_team:'Man Utd',away_team:'Arsenal',league:'Premier League',sport:'football',is_live:true,minute:34,score:'0-0'},
+   leg_a:{bookmaker:'Betano.ng',bookmaker_id:'betano',market:'asian_handicap',outcome:'Home -0.5 AH',odds:2.30,url:'https://betano.ng'},
+   leg_b:{bookmaker:'1Win.ng',bookmaker_id:'1win',market:'double_chance',outcome:'X2 (Draw/Away)',odds:1.95,url:'https://1win.ng'},
+   arb:{profit_pct:3.21,market_type:'cross',market_label:'Home AH -0.5 × Double Chance X2',is_live:true,age_seconds:8,detected_at:new Date().toISOString()}},
+  {arb_id:'d5',event:{home_team:'Dortmund',away_team:'Bayern Munich',league:'Bundesliga',sport:'football',is_live:false},
+   leg_a:{bookmaker:'BetKing',bookmaker_id:'betking',market:'over_under',outcome:'Over 1.5',odds:1.42,url:'https://betking.com'},
+   leg_b:{bookmaker:'LiveScoreBet',bookmaker_id:'livescorebet',market:'over_under',outcome:'Under 1.5',odds:3.80,url:'https://livescorebet.com'},
+   arb:{profit_pct:2.88,market_type:'direct',market_label:'Over/Under',is_live:false,age_seconds:155,detected_at:new Date().toISOString()}},
+  {arb_id:'d6',event:{home_team:'Enyimba',away_team:"Rangers Int'l",league:'NPFL',sport:'football',is_live:false},
+   leg_a:{bookmaker:'Bet9ja',bookmaker_id:'bet9ja',market:'dnb',outcome:'Home Win DNB',odds:2.20,url:'https://bet9ja.com'},
+   leg_b:{bookmaker:'SportyBet',bookmaker_id:'sportybet',market:'dnb',outcome:'Away Win DNB',odds:2.15,url:'https://sportybet.com'},
+   arb:{profit_pct:1.77,market_type:'direct',market_label:'Home/Away DNB',is_live:false,age_seconds:220,detected_at:new Date().toISOString()}},
+  {arb_id:'d7',event:{home_team:'Atletico Madrid',away_team:'Sevilla',league:'La Liga',sport:'football',is_live:false},
+   leg_a:{bookmaker:'IlotBet',bookmaker_id:'ilotbet',market:'european_handicap',outcome:'Away (-1:0) HDP',odds:2.05,url:'https://ilotbet.com'},
+   leg_b:{bookmaker:'Football.ng',bookmaker_id:'footballng',market:'1x2',outcome:'Home Win',odds:2.25,url:'https://football.ng'},
+   arb:{profit_pct:1.60,market_type:'cross',market_label:'Away (-1:0) HDP × Home Win',is_live:false,age_seconds:310,detected_at:new Date().toISOString()}},
+];
+
+const DEMO_BOOKMAKERS = [
+  {id:'sportybet',name:'SportyBet',success:true,legs_scraped:842,duration_ms:890},
+  {id:'bet9ja',name:'Bet9ja',success:true,legs_scraped:776,duration_ms:1120},
+  {id:'betking',name:'BetKing',success:true,legs_scraped:614,duration_ms:740},
+  {id:'bangbet',name:'BangBet',success:false,legs_scraped:0,error:'Connection timeout',duration_ms:5000},
+  {id:'betano',name:'Betano.ng',success:true,legs_scraped:521,duration_ms:960},
+  {id:'msport',name:'Msport',success:true,legs_scraped:488,duration_ms:1050},
+  {id:'livescorebet',name:'LiveScoreBet',success:true,legs_scraped:395,duration_ms:820},
+  {id:'1win',name:'1Win.ng',success:false,legs_scraped:0,error:'HTTP 403',duration_ms:2000},
+  {id:'ilotbet',name:'IlotBet',success:true,legs_scraped:312,duration_ms:2100},
+  {id:'footballng',name:'Football.ng',success:true,legs_scraped:280,duration_ms:1300},
+];
+
+// ════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════
+let state = {
+  arbs:        [],
+  bookmakers:  [],
+  stats:       {},
+  filters:     {mkt:'all', type:'all', minPct:0, search:''},
+  sortAsc:     false,
+  selected:    null,
+  apiUrl:      CONFIG.defaultApiUrl,
+  connected:   false,        // true = live backend
+  ws:          null,
+  pollTimer:   null,
+};
+
+// ════════════════════════════════════════════════════════
+// MARKET TYPE HELPERS
+// ════════════════════════════════════════════════════════
+const MKT_CLASS = {
+  over_under:'ou', asian_handicap:'ah', btts:'btts',
+  '1x2':'hw', dnb:'hw', draw_no_bet:'hw',
+  european_handicap:'cross', double_chance:'cross',
+};
+const MKT_LABEL = {
+  over_under:'Over/Under', asian_handicap:'Asian HDP', btts:'BTTS',
+  '1x2':'Home/Away', dnb:'H/A DNB', european_handicap:'Euro HDP',
+  double_chance:'Dbl Chance',
+};
+
+function mktClass(arb) {
+  if (arb.arb.market_type === 'cross') return 'cross';
+  const m = arb.leg_a.market.toLowerCase().replace(/ /g,'_');
+  return MKT_CLASS[m] || 'hw';
+}
+function mktLabel(arb) {
+  const lbl = arb.arb.market_label || '';
+  if (lbl.includes('×') || lbl.includes('cross')) return lbl;
+  return MKT_LABEL[arb.leg_a.market.toLowerCase().replace(/ /g,'_')] || arb.leg_a.market;
+}
+function filterMktMatch(arb, mkt) {
+  if (mkt === 'all') return true;
+  return mktClass(arb) === mkt;
+}
+function filterTypeMatch(arb, type) {
+  if (type === 'all') return true;
+  if (type === 'live') return arb.arb.is_live;
+  if (type === 'prematch') return !arb.arb.is_live;
+  return true;
+}
+
+// ════════════════════════════════════════════════════════
+// FILTER + SORT
+// ════════════════════════════════════════════════════════
+function filteredArbs() {
+  const {mkt, type, minPct, search} = state.filters;
+  return state.arbs
+    .filter(a => filterMktMatch(a, mkt))
+    .filter(a => filterTypeMatch(a, type))
+    .filter(a => a.arb.profit_pct >= minPct)
+    .filter(a => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (
+        a.event.home_team.toLowerCase().includes(q) ||
+        a.event.away_team.toLowerCase().includes(q) ||
+        a.event.league.toLowerCase().includes(q) ||
+        a.leg_a.bookmaker.toLowerCase().includes(q) ||
+        a.leg_b.bookmaker.toLowerCase().includes(q)
+      );
+    })
+    .sort((x,y) => state.sortAsc
+      ? x.arb.profit_pct - y.arb.profit_pct
+      : y.arb.profit_pct - x.arb.profit_pct
+    );
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER — TABLE
+// ════════════════════════════════════════════════════════
+const prevIds = new Set();
+function renderTable() {
+  const list = filteredArbs();
+  const tbody = document.getElementById('arbTable');
+  const newIds = new Set(list.map(a => a.arb_id));
+
+  // Update stats
+  const total = list.length;
+  const profits = list.map(a => a.arb.profit_pct);
+  document.getElementById('vArbs').textContent = total;
+  document.getElementById('vAvg').textContent  = total ? (profits.reduce((s,v)=>s+v,0)/total).toFixed(2)+'%' : '—';
+  document.getElementById('vBest').textContent = total ? Math.max(...profits).toFixed(2)+'%' : '—';
+  document.getElementById('vLive').textContent = list.filter(a=>a.arb.is_live).length;
+
+  // Clear and rebuild
+  tbody.innerHTML = '';
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No arbs match your filters.</td></tr>';
+    prevIds.clear(); newIds.forEach(id => prevIds.add(id));
+    return;
+  }
+
+  list.forEach(arb => {
+    const isNew = !prevIds.has(arb.arb_id);
+    const isSelected = state.selected === arb.arb_id;
+    const pct = arb.arb.profit_pct;
+    const pctCls = pct >= 5 ? 'hot' : pct >= 2 ? 'warm' : 'mild';
+    const mc = mktClass(arb);
+    const ml = mktLabel(arb);
+    const age = arb.arb.age_seconds;
+    const ageStr = age < 60 ? Math.round(age)+'s' : Math.round(age/60)+'m';
+
+    const score = arb.event.is_live && arb.event.score ? ` · ${arb.event.score}` : '';
+    const minute = arb.event.is_live && arb.event.minute ? ` ${arb.event.minute}'` : '';
+
+    const tr = document.createElement('tr');
+    if (isSelected) tr.classList.add('selected');
+    if (isNew) tr.classList.add('new-arb');
+
+    tr.innerHTML = `
+      <td>
+        <div class="event-name">${arb.event.home_team} v ${arb.event.away_team}</div>
+        <div class="event-meta">${arb.event.league}${score}${minute}</div>
+      </td>
+      <td><span class="mkt-badge ${mc}">${ml}</span></td>
+      <td>
+        <div class="leg-outcome">${arb.leg_a.outcome}</div>
+        <div class="leg-meta">
+          <span class="bookie-tag">${arb.leg_a.bookmaker}</span>
+          <span class="odds-val">${Number(arb.leg_a.odds).toFixed(2)}</span>
+        </div>
+      </td>
+      <td>
+        <div class="leg-outcome">${arb.leg_b.outcome}</div>
+        <div class="leg-meta">
+          <span class="bookie-tag">${arb.leg_b.bookmaker}</span>
+          <span class="odds-val">${Number(arb.leg_b.odds).toFixed(2)}</span>
+        </div>
+      </td>
+      <td><span class="pct ${pctCls}">${pct.toFixed(2)}%</span></td>
+      <td>${arb.arb.is_live ? '<span class="live-tag">LIVE</span>' : '<span class="pre-tag">Pre</span>'}</td>
+      <td style="font-family:var(--mono);font-size:10px;color:var(--text3)">${ageStr}</td>
+      <td>
+        <button class="action-btn" onclick="openBet(event,'${arb.arb_id}')">Bet ↗</button>
+      </td>
+    `;
+    tr.addEventListener('click', (e) => {
+      if (e.target.classList.contains('action-btn')) return;
+      selectArb(arb);
+    });
+    tbody.appendChild(tr);
+  });
+
+  prevIds.clear();
+  newIds.forEach(id => prevIds.add(id));
+}
+
+// ════════════════════════════════════════════════════════
+// SELECT ARB → load into calculator
+// ════════════════════════════════════════════════════════
+function selectArb(arb) {
+  state.selected = arb.arb_id;
+  document.getElementById('calcLabel').textContent =
+    `${arb.event.home_team} v ${arb.event.away_team}`;
+  document.getElementById('cOddsA').value = Number(arb.leg_a.odds).toFixed(2);
+  document.getElementById('cOddsB').value = Number(arb.leg_b.odds).toFixed(2);
+  recalc();
+  renderTable(); // refresh selection highlight
+}
+
+function openBet(e, arbId) {
+  e.stopPropagation();
+  const arb = state.arbs.find(a => a.arb_id === arbId);
+  if (!arb) return;
+  const urlA = arb.leg_a.url;
+  const urlB = arb.leg_b.url;
+  if (urlA) window.open(urlA, '_blank');
+  toast(`Opening ${arb.leg_a.bookmaker} & ${arb.leg_b.bookmaker}`, 'info');
+  setTimeout(() => { if (urlB && urlB !== urlA) window.open(urlB, '_blank'); }, 400);
+}
+
+// ════════════════════════════════════════════════════════
+// CALCULATOR
+// ════════════════════════════════════════════════════════
+function recalc() {
+  const budget = parseFloat(document.getElementById('cBudget').value) || 0;
+  const oA     = parseFloat(document.getElementById('cOddsA').value) || 0;
+  const oB     = parseFloat(document.getElementById('cOddsB').value) || 0;
+  const warn   = document.getElementById('calcWarn');
+
+  if (!oA || !oB || !budget || oA < 1.01 || oB < 1.01) return;
+
+  const implied = (1/oA) + (1/oB);
+  document.getElementById('rImpl').textContent = (implied*100).toFixed(3)+'%';
+
+  if (implied >= 1) {
+    warn.style.display = 'block';
+    ['rSA','rSB','rRet','rProfit'].forEach(id => document.getElementById(id).textContent = '—');
+    return;
+  }
+  warn.style.display = 'none';
+
+  const sa  = budget * (1/oA) / implied;
+  const sb  = budget * (1/oB) / implied;
+  const ret = sa * oA;
+  const fmt = v => '₦' + Math.round(v).toLocaleString('en-NG');
+
+  document.getElementById('rSA').textContent     = fmt(sa);
+  document.getElementById('rSB').textContent     = fmt(sb);
+  document.getElementById('rRet').textContent    = fmt(ret);
+  document.getElementById('rProfit').textContent = fmt(ret - budget);
+}
+
+// ════════════════════════════════════════════════════════
+// BOOKMAKER STATUS
+// ════════════════════════════════════════════════════════
+function renderBookmakers() {
+  const bkList = document.getElementById('bkList');
+  bkList.innerHTML = '';
+  state.bookmakers.forEach(bk => {
+    const div = document.createElement('div');
+    div.className = 'bk-item';
+    const statusCls = !bk.active ? 'idle' : bk.success ? 'ok' : 'err';
+    const legInfo = bk.success ? `${bk.legs_scraped || 0} legs · ${bk.duration_ms || 0}ms` : (bk.error || 'error');
+    div.innerHTML = `
+      <div>
+        <div class="bk-name">${bk.name}</div>
+        <div class="bk-meta">${legInfo}</div>
+      </div>
+      <div class="bk-status ${statusCls}"></div>
+    `;
+    bkList.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// STATS UPDATE
+// ════════════════════════════════════════════════════════
+function applyStats(stats) {
+  if (!stats) return;
+  const scan = stats.last_scan_at ? new Date(stats.last_scan_at) : null;
+  document.getElementById('vScan').textContent = scan
+    ? scan.toLocaleTimeString('en-NG', {hour:'2-digit',minute:'2-digit',second:'2-digit'})
+    : '—';
+}
+
+// ════════════════════════════════════════════════════════
+// DATA LOADING — live backend
+// ════════════════════════════════════════════════════════
+async function fetchArbs() {
+  try {
+    const r = await fetch(`${state.apiUrl}/api/arbs?limit=200`, {signal: AbortSignal.timeout(8000)});
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    state.arbs = data.arbs || [];
+    renderTable();
+  } catch(e) {
+    console.warn('fetchArbs failed:', e.message);
+  }
+}
+
+async function fetchBookmakers() {
+  try {
+    const r = await fetch(`${state.apiUrl}/api/bookmakers`, {signal: AbortSignal.timeout(5000)});
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    state.bookmakers = data.bookmakers || [];
+    renderBookmakers();
+  } catch {}
+}
+
+async function fetchStats() {
+  try {
+    const r = await fetch(`${state.apiUrl}/api/stats`, {signal: AbortSignal.timeout(5000)});
+    if (!r.ok) throw new Error();
+    const s = await r.json();
+    applyStats(s);
+  } catch {}
+}
+
+// ════════════════════════════════════════════════════════
+// WEBSOCKET — real-time push
+// ════════════════════════════════════════════════════════
+function connectWS() {
+  if (state.ws) { try { state.ws.close(); } catch {} }
+  const wsUrl = state.apiUrl.replace(/^http/, 'ws') + '/ws/arbs';
+  const ws = new WebSocket(wsUrl);
+  state.ws = ws;
+
+  ws.onopen = () => {
+    setBadge(true, 'LIVE');
+    toast('Connected to SureNaira backend', 'success');
+    clearInterval(state.pollTimer);
+    // Light REST poll as fallback backup (every 60s)
+    state.pollTimer = setInterval(() => { fetchBookmakers(); fetchStats(); }, 60000);
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'arbs_update') {
+        state.arbs = msg.arbs || [];
+        if (msg.stats) applyStats(msg.stats);
+        renderTable();
+      }
+    } catch {}
+  };
+
+  ws.onerror = () => {};
+
+  ws.onclose = () => {
+    if (state.connected) {
+      setBadge(false, 'RECONNECTING…');
+      setTimeout(connectWS, CONFIG.wsReconnect);
+    }
+  };
+}
+
+// REST polling fallback (when backend is connected but WS is not available)
+function startPolling() {
+  clearInterval(state.pollTimer);
+  fetchArbs(); fetchBookmakers(); fetchStats();
+  state.pollTimer = setInterval(() => {
+    fetchArbs(); fetchStats();
+  }, CONFIG.pollInterval);
+}
+
+// ════════════════════════════════════════════════════════
+// CONNECTION MANAGEMENT
+// ════════════════════════════════════════════════════════
+function setBadge(live, label) {
+  const badge = document.getElementById('connBadge');
+  const lbl   = document.getElementById('connLabel');
+  badge.className = 'conn-badge ' + (live ? 'live' : 'demo');
+  lbl.textContent = label;
+  state.connected = live;
+}
+
+async function tryConnect(url) {
+  state.apiUrl = url.replace(/\/$/, '');
+  setBadge(false, 'CONNECTING…');
+  try {
+    const r = await fetch(`${state.apiUrl}/api/health`, {signal: AbortSignal.timeout(4000)});
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    await r.json();
+    // Health OK — try WS
+    connectWS();
+    fetchBookmakers();
+    fetchStats();
+    fetchArbs();
+  } catch(e) {
+    setBadge(false, 'DEMO MODE');
+    toast('Could not reach backend — showing demo data', 'warn');
+    loadDemo();
+  }
+}
+
+function loadDemo() {
+  state.arbs       = DEMO_ARBS;
+  state.bookmakers = DEMO_BOOKMAKERS;
+  applyStats({last_scan_at: new Date().toISOString()});
+  renderTable();
+  renderBookmakers();
+  document.getElementById('bkLastUpdate').textContent = 'Demo';
+}
+
+// ════════════════════════════════════════════════════════
+// UI EVENTS
+// ════════════════════════════════════════════════════════
+document.getElementById('connectBtn').addEventListener('click', () => {
+  const url = document.getElementById('apiUrl').value.trim();
+  if (url) tryConnect(url);
+});
+
+document.getElementById('apiUrl').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('connectBtn').click();
+});
+
+// Market filter chips
+document.querySelectorAll('.chip[data-mkt]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.chip[data-mkt]').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    state.filters.mkt = btn.dataset.mkt;
+    renderTable();
+  });
+});
+
+// Type filter chips
+document.querySelectorAll('.chip[data-type]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.chip[data-type]').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    state.filters.type = btn.dataset.type;
+    renderTable();
+  });
+});
+
+document.getElementById('minPct').addEventListener('input', e => {
+  state.filters.minPct = parseFloat(e.target.value) || 0;
+  renderTable();
+});
+
+document.getElementById('searchBox').addEventListener('input', e => {
+  state.filters.search = e.target.value.trim();
+  renderTable();
+});
+
+document.getElementById('thPct').addEventListener('click', () => {
+  state.sortAsc = !state.sortAsc;
+  document.getElementById('thPct').textContent = 'Profit ' + (state.sortAsc ? '↑' : '↓');
+  renderTable();
+});
+
+['cBudget','cOddsA','cOddsB'].forEach(id => {
+  document.getElementById(id).addEventListener('input', recalc);
+});
+
+// ════════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════════
+function toast(msg, type='info') {
+  const wrap = document.getElementById('toastWrap');
+  const el   = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ════════════════════════════════════════════════════════
+// CLOCK
+// ════════════════════════════════════════════════════════
+function tick() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+tick();
+setInterval(tick, 1000);
+
+// ════════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════════
+(function boot() {
+  // Load demo data immediately — instant paint
+  loadDemo();
+  // Then try to connect to backend
+  const savedUrl = localStorage.getItem('sn_api_url') || CONFIG.defaultApiUrl;
+  document.getElementById('apiUrl').value = savedUrl;
+  tryConnect(savedUrl);
+
+  // Persist URL on change
+  document.getElementById('apiUrl').addEventListener('change', e => {
+    localStorage.setItem('sn_api_url', e.target.value);
+  });
+
+  // Initial calc
+  recalc();
+})();
+</script>
+</body>
+</html>

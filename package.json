@@ -1,0 +1,9 @@
+{
+  "name": "surenaira",
+  "version": "1.0.0",
+  "description": "Nigerian Surebet Scanner",
+  "scripts": {
+    "build": "echo 'Static site — no build needed'"
+  },
+  "private": true
+}
